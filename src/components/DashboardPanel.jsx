@@ -6,7 +6,10 @@ import { PREVIEW_DASHBOARD_STORAGE_KEY } from '../services/preview-privacy.js';
 import { peopleFor } from '../services/perspective.js';
 import { DAILY_QUESTIONS, emptyDashboard, otherPerson, seoulDay } from '../services/dashboard-domain.js';
 
-const GAME_NAMES = { tic: '택택토', gomoku: '오목', punch: '펀치기계' };
+const GAME_NAMES = { tic: '틱택토', gomoku: '오목', punch: '펀치기계' };
+
+function GameMark({ person }) { return person ? <svg className="tic-mark" viewBox="0 0 64 64" aria-hidden="true">{person === '여진' ? <circle cx="32" cy="32" r="23"/> : <path d="M9 9L55 55M55 9L9 55"/>}</svg> : null; }
+function GomokuArt() { return <svg viewBox="0 0 80 80" className="gomoku-art" aria-hidden="true"><path d="M10 10H70M10 30H70M10 50H70M10 70H70M10 10V70M30 10V70M50 10V70M70 10V70" fill="none" stroke="#c9b996"/ ><circle cx="30" cy="30" r="8" fill="#56574e"/><circle cx="50" cy="30" r="8" fill="#f9f6ec" stroke="#c9b996"/><circle cx="50" cy="50" r="8" fill="#56574e"/></svg>; }
 
 function MonthlyTrend({ mine, partner, currentName, onOpen }) {
   const label=usePreviewText();
@@ -63,14 +66,9 @@ function MiniGame({ kind, actor, data, act, onClose, previewMode, onSwitch }) {
     document.addEventListener('keydown', keydown);
     return () => { document.body.style.overflow = oldOverflow; document.removeEventListener('keydown', keydown); previousFocus?.focus(); };
   }, [active?.id, finished, actor, busy]);
-  async function close() {
-    if (busy) return;
-    if (finished) {
-      setBusy(true);
-      try { await act('game.dismiss', { kind, gameId: active.id }); onClose(); }
-      catch (e) { setError(e.message); }
-      finally { setBusy(false); }
-    } else onClose();
+  function close() {
+    onClose();
+    if (finished) act('game.dismiss', { kind, gameId: active.id }).catch(() => {});
   }
   async function pass() {
     if (busy || selection === null || !ownTurn) return;
@@ -79,15 +77,15 @@ function MiniGame({ kind, actor, data, act, onClose, previewMode, onSwitch }) {
     catch (e) { setError(e.message); }
     finally { setBusy(false); }
   }
-  if (!active) return null;
+  if (!active) return <div className="mini-game-backdrop" onClick={onClose}><section className="mini-game-dialog" role="dialog" aria-modal="true" aria-label={GAME_NAMES[kind]} onClick={e => e.stopPropagation()}><header className="mini-game-header"><h2>{GAME_NAMES[kind]}</h2><button className="mini-close" onClick={onClose} aria-label="게임 닫기"><X size={19}/></button></header><p role="status">게임을 불러오고 있어요…</p></section></div>;
   const size = kind === 'tic' ? 3 : 15;
   return <div className="mini-game-backdrop" onClick={event => { if (event.target === event.currentTarget) close(); }}>
     <section ref={dialogRef} tabIndex={-1} className={`mini-game-dialog theme-${kind} outcome-${outcome}`} role="dialog" aria-modal="true" aria-labelledby="mini-game-name">
-      <header className="mini-game-header"><div><span>LOVE GAME</span><h2 id="mini-game-name">{GAME_NAMES[kind]}</h2></div><button className="mini-close" onClick={close} aria-label="게임 닫기" disabled={busy}><X size={19}/></button></header>
+      <header className="mini-game-header"><div><span>LOVE GAME</span><h2 id="mini-game-name">{GAME_NAMES[kind]}</h2></div><button className="mini-close" onClick={close} aria-label="게임 닫기"><X size={19}/></button></header>
       <div className="mini-game-people">{peopleFor(actor).map(person=><span key={label(person)} className={actor===person?'is-me':''}>{label(person)} {kind==='punch'?active.scores[person]??'—':kind==='tic'?(person==='여진'?'○':'×'):(person==='여진'?'●':'○')}</span>)}</div>
       {finished ? <div className="mini-game-result" aria-live="polite"><span className="result-word">{outcome}</span><p>{!active.winner ? '마음도 실력도 닮았네요.' : `${label(active.winner)}의 승리`}</p>{kind === 'punch' && <div className="punch-final">{peopleFor(actor).map(person=><span key={label(person)}>{label(person)} <b>{active.scores[person]}</b></span>)}</div>}{outcome === 'win' && <div className="heart-confetti" aria-hidden="true">{Array.from({ length: 24 }, (_, i) => <Heart key={i} size={10 + i % 4 * 3} style={{ '--x': `${(i * 37) % 100}%`, '--delay': `${i % 7 * .13}s`, '--drift': `${(i % 5 - 2) * 22}px` }}/>)}</div>}{outcome==='lose'&&<div className="tear-rain" aria-hidden="true">{Array.from({length:30},(_,i)=><i key={i} style={{'--x':`${(i*37+7)%100}%`,'--delay':`-${i%9*.23}s`,'--duration':`${1.4+i%5*.18}s`,'--drop-size':`${3+i%3}px`}}/>)}</div>}<small>바깥을 누르면 게임이 초기화돼요.</small></div> : <>
         <p className="mini-turn" aria-live="polite">{ownTurn ? `${label(actor)}의 차례` : `${active.turn}의 차례를 기다려요`}</p>
-        {kind === 'punch' ? <div className={`punch-machine ${running?'machine-running':''} ${selection!==null?'machine-hit':''}`}><div className="punch-marquee" aria-hidden="true"><i/><span>HEART STRIKER</span><i/></div><div className="punch-display-frame"><small>POWER SCORE</small><div className="punch-display">{String(punch).padStart(4, '0')}</div></div><div className="punch-target" aria-hidden="true"><div className="punch-target-arm"/><div className="punch-bag"><svg width="35" height="35" viewBox="0 0 40 40" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"><path d="M13 28c-5-2-7-6-6-10l1-5c1-5 5-7 11-7 7 0 12 4 12 10v7c0 3-2 6-5 7"/><path d="M10 22c-3-5-1-9 2-9 3 0 4 3 4 7l3 3M13 28h13v7H13zM18 9v5M23 10v4"/></svg><i/></div><div className="punch-target-base"/></div><div className="punch-meter"><div style={{ width: `${punch / 10}%` }}/><i style={{ left: `${punch / 10}%` }}/></div><div className="punch-scale"><span>0</span><span>1000</span></div><button className="punch-hit" disabled={!ownTurn || busy || (selection !== null && !running)} onClick={() => { if (running) { cancelAnimationFrame(animationRef.current); setRunning(false); setSelection(meterRef.current); setPunch(meterRef.current); } else { setRunning(true); } }}>{running ? 'PUNCH!' : selection !== null ? 'LOCKED' : 'START'}</button></div> : <div className={`mini-board board-${kind}`} style={{ '--size': size }} aria-label={GAME_NAMES[kind] + ' 게임판'}>{active.board.map((person, index) => <button key={index} aria-label={`${Math.floor(index / size) + 1}행 ${index % size + 1}열${person ? ' ' + label(person) : ''}`} disabled={!ownTurn || Boolean(person) || busy} className={`${person || (selection === index ? actor : '')} ${selection === index ? 'pending-move' : ''}`} onClick={() => setSelection(index)}>{kind === 'tic' ? (person || (selection === index ? actor : null)) === '여진' ? '○' : (person || (selection === index ? actor : null)) === '민재' ? '×' : '' : (person || selection === index) && <i/>}</button>)}</div>}
+        {kind === 'punch' ? <div className={`punch-machine ${running?'machine-running':''} ${selection!==null?'machine-hit':''}`}><div className="punch-marquee" aria-hidden="true"><i/><span>HEART STRIKER</span><i/></div><div className="punch-display-frame"><small>POWER SCORE</small><div className="punch-display">{String(punch).padStart(4, '0')}</div></div><div className="punch-target" aria-hidden="true"><div className="punch-target-arm"/><div className="punch-bag"><svg width="35" height="35" viewBox="0 0 40 40" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"><path d="M13 28c-5-2-7-6-6-10l1-5c1-5 5-7 11-7 7 0 12 4 12 10v7c0 3-2 6-5 7"/><path d="M10 22c-3-5-1-9 2-9 3 0 4 3 4 7l3 3M13 28h13v7H13zM18 9v5M23 10v4"/></svg><i/></div><div className="punch-target-base"/></div><div className="punch-meter"><div style={{ width: `${punch / 10}%` }}/><i style={{ left: `${punch / 10}%` }}/></div><div className="punch-scale"><span>0</span><span>1000</span></div><button className="punch-hit" disabled={!ownTurn || busy || (selection !== null && !running)} onClick={() => { if (running) { cancelAnimationFrame(animationRef.current); setRunning(false); setSelection(meterRef.current); setPunch(meterRef.current); } else { setRunning(true); } }}>{running ? 'PUNCH!' : selection !== null ? 'LOCKED' : 'START'}</button></div> : <div className={`mini-board board-${kind}`} style={{ '--size': size }} aria-label={GAME_NAMES[kind] + ' 게임판'}>{active.board.map((person, index) => <button key={index} aria-label={`${Math.floor(index / size) + 1}행 ${index % size + 1}열${person ? ' ' + label(person) : ''}`} disabled={!ownTurn || Boolean(person) || busy} className={`${person || (selection === index ? actor : '')} ${selection === index ? 'pending-move' : ''}`} onClick={() => setSelection(index)}>{kind === 'tic' ? <GameMark person={person || (selection === index ? actor : null)}/> : (person || selection === index) && <i/>}</button>)}</div>}
         <button className="mini-pass" disabled={!ownTurn || selection === null || busy || running} onClick={pass}>{busy ? '저장 중…' : '상대에게 넘기기'}<ArrowRight size={16}/></button>
       </>}
       {error && <p className="asking-error" role="alert">{error}</p>}
@@ -102,22 +100,29 @@ export default function DashboardPanel({ state, sections, currentName, dashboard
   const [day, setDay] = useState(seoulDay), [data, setData] = useState(emptyDashboard), [error, setError] = useState(''), [text, setText] = useState(''), [busy, setBusy] = useState(false), [activeGame, setActiveGame] = useState(null);
   const store = useMemo(() => !previewMode && connectedDashboard ? connectedDashboard : makeDashboardStore(localStorage, { storageKey:previewMode?PREVIEW_DASHBOARD_STORAGE_KEY:(dashboardStorageKey||DASHBOARD_STORAGE_KEY), lock: task => navigator.locks ? navigator.locks.request('love-map-dashboard', task) : Promise.resolve().then(task) }), [previewMode,dashboardStorageKey,connectedDashboard]);
   const checkins = useMemo(() => ({ [currentName]: state.scores || [], [otherPerson(currentName)]: state.partnerScores || [] }), [state.scores, state.partnerScores, currentName]);
+  const mutationVersion = useRef(0);
   const checkinsKey = JSON.stringify(checkins);
   useEffect(() => { const timer = setInterval(() => setDay(seoulDay()), 30000); return () => clearInterval(timer); }, []);
   useEffect(() => {
     let mounted = true;
-    const refresh = () => store.act(actor, 'daily.sync', {}, checkins).then(next => { if (mounted) { setData(next); setError(''); } }).catch(e => { if (mounted) setError(e.message); });
+    let reading = false;
+    const refresh = () => { if (reading) return; reading = true; const version = mutationVersion.current; return store.read().then(next => { if (mounted && version === mutationVersion.current) { setData(next); setError(''); } }).catch(e => { if (mounted) setError(e.message); }).finally(() => { reading = false; }); };
     refresh();
     const storage = event => { if (event.key === (previewMode?PREVIEW_DASHBOARD_STORAGE_KEY:(dashboardStorageKey||DASHBOARD_STORAGE_KEY))) store.read().then(next => { if (mounted) setData(next); }).catch(e => { if (mounted) setError(e.message); }); };
-    const timer = !previewMode && connectedDashboard ? setInterval(() => { if (document.visibilityState !== 'hidden') refresh(); }, 10000) : null;
+    const timer = !previewMode && connectedDashboard ? setInterval(() => { if (document.visibilityState !== 'hidden') refresh(); }, activeGame ? 800 : 10000) : null;
     window.addEventListener('storage', storage); window.addEventListener('focus', refresh);
     return () => { mounted = false; clearInterval(timer); window.removeEventListener('storage', storage); window.removeEventListener('focus', refresh); };
+  }, [store, actor, day, checkinsKey, Boolean(activeGame)]);
+  useEffect(() => {
+    let mounted = true; const version = mutationVersion.current;
+    store.act(actor, 'daily.sync', {}, checkins).then(next => { if (mounted && version === mutationVersion.current) setData(next); }).catch(e => { if (mounted) setError(e.message); });
+    return () => { mounted = false; };
   }, [store, actor, day, checkinsKey]);
   const queue = data.queues[actor];
   useEffect(() => { setText(''); }, [actor, queue?.day, queue?.activeId, queue?.version]);
-  async function act(action, payload) { const next = await store.act(actor, action, payload, checkins); setData(next); return next; }
+  async function act(action, payload) { mutationVersion.current++; try { const next = await store.act(actor, action, payload, checkins); setData(next); return next; } catch (e) { setError(e.message); throw e; } finally { mutationVersion.current++; } }
   async function saveAnswer() { if (busy || !text.trim()) return; setBusy(true); setError(''); try { await act('daily.answer', { text, questionId: queue.activeId, version: queue.version }); setText(''); } catch (e) { setError(e.message); } finally { setBusy(false); } }
-  async function openGame(kind) { setError(''); try { await act('game.open', { kind }); setActiveGame(kind); } catch (e) { setError(e.message); } }
+  async function openGame(kind) { setError(''); setActiveGame(kind); if (data.games[kind] || data.pendingResults?.[actor]?.[kind]) return; try { await act('game.open', { kind }); } catch (e) { setError(e.message); } }
   const incoming = data.replies.find(reply => reply.recipient === actor && reply.date === day);
   const outgoing = data.replies.find(reply => reply.author === actor && reply.date === day);
   const updateTimes = actor === currentName ? state.partnerUpdates || {} : Object.fromEntries(sections.map(section => [section.id, Object.entries(state.answerUpdatedAt || {}).filter(([key]) => key.startsWith(section.id + ':')).map(([, time]) => time).sort().at(-1)]));
@@ -130,7 +135,7 @@ export default function DashboardPanel({ state, sections, currentName, dashboard
     <section className="dash-daily-answer"><div className="dash-card-heading"><div><span className="eyebrow">A LITTLE MORE OF YOU</span><h2>오늘의 답변</h2></div><span className="dash-person">FROM. {label(otherPerson(actor))}</span></div>{incoming ? <><h3>{label(incoming.question)}</h3><p className="dash-reply-text">{label(incoming.text)}</p></> : <div className="dash-answer-wait"><Heart size={20} strokeWidth={1.2}/><p>아직 도착한 답변이 없어요.</p></div>}</section></div>
     {error && <p className="asking-error" role="alert">{error}</p>}
     <div className="dash-lower-grid"><MonthlyTrend mine={state.scores} partner={state.partnerScores} currentName={currentName} onOpen={onHistory}/><button className="dash-archive" onClick={onArchive}><span className="eyebrow">OUR LITTLE ARCHIVE</span><div className="archive-drawing" aria-hidden="true"><Heart size={29} strokeWidth={1}/><i/><i/><i/></div><h2>함께 쌓아온 마음들</h2><span className="archive-open">기록 열어보기<ArrowRight size={17}/></span></button></div>
-    <section className="dash-game-zone"><header className="dash-card-heading"><div><span className="eyebrow">A LITTLE PLAY, A LOT OF LOVE</span><h2>love game</h2></div><button className="dash-map-game" onClick={onGame}>애정 지도 게임하기<ArrowRight size={16}/></button></header><div className="dash-games">{Object.entries(GAME_NAMES).map(([kind, label], index) => <button className={`dash-game-tile tile-${kind}`} key={kind} onClick={() => openGame(kind)}><span className="game-tile-top"><span className="game-tile-number">0{index + 1}</span><span className="game-tile-status">{data.pendingResults?.[actor]?.[kind]?'결과 도착':data.games[kind]?.revision?(data.games[kind].turn===actor?'내 차례':'기다리는 중'):''}</span></span><div className={`game-tile-art art-${kind}`} aria-hidden="true">{kind === 'tic' ? <><span>○</span><span>×</span></> : kind === 'gomoku' ? <><i/><i/><i/></> : <><span>1000</span><i/></>}</div><span className="game-tile-footer"><b>{label}</b><ArrowRight size={17}/></span></button>)}</div></section>
+    <section className="dash-game-zone"><header className="dash-card-heading"><div><span className="eyebrow">A LITTLE PLAY, A LOT OF LOVE</span><h2>love game</h2></div><button className="dash-map-game" onClick={onGame}>애정 지도 게임하기<ArrowRight size={16}/></button></header><div className="dash-games">{Object.entries(GAME_NAMES).map(([kind, label], index) => <button className={`dash-game-tile tile-${kind}`} key={kind} onClick={() => openGame(kind)}><span className="game-tile-top"><span className="game-tile-number">0{index + 1}</span><span className="game-tile-status">{data.pendingResults?.[actor]?.[kind]?'결과 도착':data.games[kind]?.revision?(data.games[kind].turn===actor?'내 차례':'기다리는 중'):''}</span></span><div className={`game-tile-art art-${kind}`} aria-hidden="true">{kind === 'tic' ? <><GameMark person="여진"/><GameMark person="민재"/></> : kind === 'gomoku' ? <GomokuArt/> : <><span>1000</span><i/></>}</div><span className="game-tile-footer"><b>{label}</b><ArrowRight size={17}/></span></button>)}</div></section>
     {activeGame && <MiniGame kind={activeGame} actor={actor} data={data} act={act} onClose={() => setActiveGame(null)} previewMode={previewMode} onSwitch={() => onPreviewSwitch(otherPerson(actor))}/>}
   </div>;
 }

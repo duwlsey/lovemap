@@ -560,12 +560,26 @@ function serverSheet_() {
   return sheet;
 }
 function serverRead_(kind, id, fallback) {
+  const cacheKey = "snapshot-v2:" + kind + ":" + id;
+  const cache = typeof CacheService !== "undefined" ? CacheService.getScriptCache() : null;
+  const cached = cache == null ? void 0 : cache.get(cacheKey);
+  if (cached) {
+    try {
+      return JSON.parse(cached);
+    } catch {
+    }
+  }
   const sheet = serverSheet_(), count = sheet.getLastRow() - 1;
   const rows = count > 0 ? sheet.getRange(2, 1, count, 6).getValues().filter((row) => row[0] === kind && row[1] === id) : [];
   const versions = [...new Set(rows.map((row) => Number(row[2])))].sort((a, b) => b - a);
   for (const version of versions) {
     const parts = rows.filter((row) => Number(row[2]) === version).sort((a, b) => Number(a[3]) - Number(b[3]));
-    if (parts.length && parts.length === Number(parts[0][4]) && parts.every((row, i) => Number(row[3]) === i)) return { version, value: JSON.parse(parts.map((row) => JSON.parse(row[5])).join("")) };
+    if (parts.length && parts.length === Number(parts[0][4]) && parts.every((row, i) => Number(row[3]) === i)) {
+      const result = { version, value: JSON.parse(parts.map((row) => JSON.parse(row[5])).join("")) };
+      const serialized = JSON.stringify(result);
+      if (serialized.length < 24e3) cache == null ? void 0 : cache.put(cacheKey, serialized, 300);
+      return result;
+    }
   }
   return { version: 0, value: fallback };
 }
@@ -577,6 +591,12 @@ function serverWrite_(kind, id, value) {
   if (start + rows.length - 1 > sheet.getMaxRows()) sheet.insertRowsAfter(sheet.getMaxRows(), rows.length + 100);
   sheet.getRange(start, 1, rows.length, 6).setNumberFormat("@").setValues(rows);
   SpreadsheetApp.flush();
+  if (typeof CacheService !== "undefined") {
+    const cache = CacheService.getScriptCache(), key = "snapshot-v2:" + kind + ":" + id;
+    cache.remove(key);
+    const serialized = JSON.stringify({ version: previous.version + 1, value });
+    if (serialized.length < 24e3) cache.put(key, serialized, 300);
+  }
   const all = sheet.getRange(2, 1, sheet.getLastRow() - 1, 6).getValues();
   const obsolete = all.map((row, i) => row[0] === kind && row[1] === id && Number(row[2]) < previous.version ? i + 2 : null).filter(Boolean);
   for (let i = obsolete.length - 1; i >= 0; ) {
@@ -647,7 +667,8 @@ function serverRequest_(input) {
         auth.logout();
         result = {};
       } else throw new Error("지원하지 않는 요청이에요.");
-      return { result, sessionToken: token };
+      const session2 = (result == null ? void 0 : result.session) || ((result == null ? void 0 : result.memberId) ? result : null);
+      return { result, sessionToken: token, initialPair: session2 ? serverVisiblePair_(serverRead_("pair", session2.pairId, {}).value, session2) : void 0 };
     }
     const session = auth.getSession();
     if (!session) throw new Error("다시 입장해주세요.");
@@ -744,7 +765,7 @@ function serverData_(input, session) {
     if (!/^[a-zA-Z0-9-]{8,100}$/.test(input.requestId)) throw new Error("잘못된 요청이에요.");
     if (stored.requests.includes(input.requestId)) return stored.state;
     if (p.kind && !["tic", "gomoku", "punch"].includes(p.kind)) throw new Error("게임을 확인해주세요.");
-    const pair = serverRead_("pair", pairId, {}).value;
+    const pair = action.startsWith("daily.") ? serverRead_("pair", pairId, {}).value : {};
     const checkins = { 여진: pair.scores || [], 민재: pair.partnerScores || [] };
     if (action === "daily.answer") stored.state = dashboardAction(stored.state, actor, "daily.sync", {}, { day: serverDay_(), id: Utilities.getUuid(), checkins });
     const before = JSON.stringify(stored.state);

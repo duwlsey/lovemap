@@ -182,3 +182,13 @@
 @keyframes tear-fall{0%{transform:translateY(0);opacity:0}12%{opacity:.65}85%{opacity:.4}100%{transform:translateY(370px);opacity:0}}
 @media(prefers-reduced-motion:reduce){.tear-rain>i{animation:none;top:var(--x);opacity:.3}}
 @media(max-width:760px){.punch-machine{padding-left:18px;padding-right:18px}.punch-marquee{margin-left:-18px;margin-right:-18px;padding-left:18px;padding-right:18px}.punch-target{height:132px;padding-top:25px}.punch-bag{width:75px;height:75px}.punch-machine .punch-display{font-size:50px}}
+
+/* Shared geometry stays identical across mobile fonts and screen sizes. */
+.tic-mark{width:52px;height:52px;fill:none;stroke:currentColor;stroke-width:5;stroke-linecap:round;flex:none}
+.board-tic .tic-mark{width:64%;height:64%;max-width:65px;max-height:65px}
+.art-tic .tic-mark+ .tic-mark{color:#acb99b}
+.art-gomoku{background:none!important}.gomoku-art{width:100%;height:100%;display:block}
+.mini-close{min-width:44px;min-height:44px;touch-action:manipulation}.dash-game-tile,.mini-pass,.mini-board button{touch-action:manipulation}
+.tear-rain{z-index:1}.tear-rain>i{width:calc(var(--drop-size) + 2px);height:22px;border-radius:2px;background:linear-gradient(transparent,#719dd5);opacity:.65;will-change:transform;animation-name:visible-rain}
+@keyframes visible-rain{from{transform:translate3d(-12px,-25px,0);opacity:.7}to{transform:translate3d(12px,440px,0);opacity:.25}}
+@media(max-width:760px){.art-tic .tic-mark{width:36px;height:36px}.mini-game-backdrop{backdrop-filter:none}}

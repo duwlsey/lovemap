@@ -14,7 +14,7 @@ test('deployable bundle excludes unsupported logical assignments and newer array
   assert.match(code, /function doPost\(/);
 });
 function server() {
-  const sheets = new Map();
+  const sheets = new Map(), cache = new Map();
   const props = new Map([['SPREADSHEET_ID', 'test-sheet']]);
   const makeSheet = () => {
     const rows = [];
@@ -29,6 +29,7 @@ function server() {
   };
   let locked = false;
   const context = vm.createContext({ console, Intl, Date, Set, Map, Uint8Array, JSON,
+    CacheService: { getScriptCache: () => ({ get: key => cache.get(key) || null, put: (key, value) => cache.set(key, value), remove: key => cache.delete(key) }) },
     PropertiesService: { getScriptProperties: () => ({ getProperty: key => props.get(key), setProperty: (key, value) => props.set(key, value) }) },
     SpreadsheetApp: { flush() {}, openById: () => ({ getSheetByName: key => sheets.get(key), insertSheet: key => { const value = makeSheet(); sheets.set(key, value); return value; } }) },
     LockService: { getScriptLock: () => ({ waitLock() { assert.equal(locked, false); locked = true; }, hasLock: () => locked, releaseLock() { locked = false; } }) },
@@ -149,4 +150,17 @@ test('pair synchronization preserves edits typed during a request and sends only
   sync.update({ ...state, answers: { 'who:0': '수정 중' } }); resolve(); await saving;
   assert.equal(state.answers['who:0'], '수정 중'); assert.equal(state.partnerAnswers['who:0'], '짝꿍');
   sync.stop();
+});
+
+
+test('cached snapshots reflect partner moves and session revocation immediately', () => {
+  const s = server(), a = register(s), b = join(s);
+  s.call('dashboard.game.open', { kind: 'tic' }, a.sessionToken);
+  const initial = s.call('dashboard.read', {}, b.sessionToken).data.games.tic;
+  s.call('dashboard.game.move', { kind: 'tic', gameId: initial.id, revision: 0, move: 4 }, a.sessionToken);
+  const fresh = s.call('dashboard.read', {}, b.sessionToken).data.games.tic;
+  assert.equal(fresh.board[4], '여진'); assert.equal(fresh.revision, 1);
+  s.call('auth.logout', {}, a.sessionToken);
+  assert.equal(s.call('dashboard.read', {}, a.sessionToken).ok, false);
+  assert.equal(s.call('dashboard.read', {}, b.sessionToken).ok, true);
 });

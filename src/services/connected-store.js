@@ -5,7 +5,9 @@ const equal = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 
 export function makeConnection({ endpoint, storage, tabStorage, fetcher = fetch }) {
   if (endpoint && !/^https:\/\/script\.google\.com\/macros\/s\/[a-zA-Z0-9_-]+\/exec$/.test(endpoint)) throw new Error('Apps Script 배포 주소를 확인해주세요.');
+  let initialPair;
   async function request(action, payload = {}, requestId) {
+    if (action === 'pair.patch') initialPair = undefined;
     if (!endpoint) throw new Error('실제 저장소를 연결하는 중이에요. 지금은 미리보기를 이용해주세요.');
     let response;
     try {
@@ -15,6 +17,7 @@ export function makeConnection({ endpoint, storage, tabStorage, fetcher = fetch 
     let result;
     try { result = await response.json(); } catch { throw new Error('저장 서버의 배포 권한과 주소를 확인해주세요.'); }
     if (!result.ok) throw new Error(result.error || '저장하지 못했어요. 다시 시도해주세요.');
+    if (action.startsWith('auth.')) initialPair = result.data?.initialPair;
     return result.data;
   }
   const readDevice = () => JSON.parse(storage.getItem(DEVICE_KEY) || '{"profiles":[],"selectedId":null}');
@@ -48,7 +51,7 @@ export function makeConnection({ endpoint, storage, tabStorage, fetcher = fetch 
     if (!retries.has(key)) retries.set(key, crypto.randomUUID());
     const result = await request(action, payload, retries.get(key)); retries.delete(key); return result;
   }
-  return { auth, request,
+  return { auth, request, takeInitialPair: () => { const value = initialPair; initialPair = undefined; return value; },
     asking: {
       list: () => request('asking.list'),
       draw: requestId => request('asking.draw', {}, requestId || crypto.randomUUID()),

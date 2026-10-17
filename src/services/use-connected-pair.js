@@ -6,7 +6,9 @@ export function useConnectedPair({ connection, auth, previewMode, state, default
   useEffect(() => {
     if (!connection || !auth || previewMode) return;
     let ready = false;
-    const sync = makePairSync({ request: connection.request, actor: auth.slot,
+    let initialPair = connection.takeInitialPair?.();
+    const request = (action, ...args) => { if (action === 'pair.read' && initialPair !== undefined) { const value = initialPair; initialPair = undefined; return Promise.resolve(value); } return connection.request(action, ...args); };
+    const sync = makePairSync({ request, actor: auth.slot,
       onState: remote => {
         setState(previous => ({ ...defaultState, ...remote, ...(ready ? { test: previous.test, lastTestResult: previous.lastTestResult } : {}) }));
         ready = true; setLoadedPair(auth.pairId); setAuthError('');
