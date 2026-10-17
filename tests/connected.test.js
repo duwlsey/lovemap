@@ -7,6 +7,12 @@ import { createHmac, randomUUID } from 'node:crypto';
 import { makeConnection, makePairSync, pairDelta } from '../src/services/connected-store.js';
 
 execFileSync(process.execPath, ['scripts/build-server.mjs']);
+test('deployable bundle excludes unsupported logical assignments and newer array methods', () => {
+  const code = readFileSync('apps-script/production/Code.gs', 'utf8');
+  assert.doesNotMatch(code, /\|\|=|&&=|\?\?=|\.at\(/);
+  assert.match(code, /function setupLoveMap\(/);
+  assert.match(code, /function doPost\(/);
+});
 function server() {
   const sheets = new Map();
   const props = new Map([['SPREADSHEET_ID', 'test-sheet']]);
