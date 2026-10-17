@@ -105,7 +105,6 @@
 .result-word{font:500 72px 'DM Sans',sans-serif;letter-spacing:9px;text-transform:uppercase;position:relative;z-index:2}
 .mini-game-result>p{font:16px var(--serif);position:relative;z-index:2}
 .mini-game-result>small{font:10px var(--serif);margin-top:35px;opacity:.5;position:relative;z-index:2}
-.outcome-lose{color:#6787ae}
 .outcome-win .result-word{color:#b67c87;text-shadow:0 4px 18px #b5889020}
 .heart-confetti{position:absolute;inset:0;pointer-events:none;overflow:hidden}
 .heart-confetti svg{position:absolute;left:var(--x);top:-25px;color:#c68f99;fill:#d6a6af;animation:heart-fall 2.7s var(--delay) ease-in infinite}
@@ -176,12 +175,7 @@
 .punch-machine .punch-hit:active{transform:translateY(2px);box-shadow:0 1px 0 #7b5449}
 .punch-scale{font-size:8px;color:#748b80;letter-spacing:1px}
 /* Blue loss screen and quiet tear-shaped rain, opposite the pink win confetti. */
-.mini-game-dialog.outcome-lose{color:#6787ae}
-.outcome-lose .mini-game-header span,.outcome-lose .mini-game-people{color:#8ca3be}
-.outcome-lose .mini-game-people .is-me{color:#5d7ea7}
-.outcome-lose .mini-game-people{border-bottom-color:#c8d6e7}
 .outcome-lose .result-word{color:#6b92c2;text-shadow:0 3px 18px #729bd322}
-.outcome-lose .mini-preview-switch{color:#6a87aa}
 .tear-rain{position:absolute;inset:0;pointer-events:none;overflow:hidden}
 .tear-rain>i{position:absolute;left:var(--x);top:-30px;width:var(--drop-size);height:calc(var(--drop-size) * 1.7);border-radius:65% 65% 75% 75%;background:#8badd5;opacity:0;animation:tear-fall var(--duration) var(--delay) linear infinite}
 .tear-rain>i:before{content:'';position:absolute;bottom:100%;left:45%;width:1px;height:15px;background:linear-gradient(transparent,#8badd54d)}
