@@ -1,23 +1,27 @@
-# 배포와 실제 저장소 연결
+# Google 저장소와 GitHub Pages 연결
 
-## 현재 상태
+## 현재 준비된 것
 
-화면과 기능을 브라우저 저장 방식으로 구현했습니다. GitHub Pages는 화면을 제공하며, 기기 간 기록 공유와 실제 PIN 인증은 Google Apps Script 서버 구현·연결 후 가능합니다. 현재 apps-script 코드는 이전 인증 방식의 초안으로, 그대로 배포하면 안 됩니다.
+프런트엔드와 개인 PIN 방식 Apps Script 서버 코드를 준비했습니다. 저장 시트에는 LoveMapData 헤더만 생성하며 테스트 계정·기록은 넣지 않습니다. 서버와 실제 기기 사이의 동작은 Apps Script 배포 후 확인해야 합니다.
 
-## 진행 순서
+## 다음 순서
 
-1. Google Drive에서 빈 Google 스프레드시트를 만들고 공유 범위는 비공개로 유지합니다.
-2. PIN 인증, 커플별 접근 권한, 전체 기록 저장 API를 Apps Script에서 완성합니다. 시트에는 커플·회원·세션·답변·점검 결과·질문 순서·오늘의 질문·게임 상태 등을 분리해 저장합니다.
-3. 시트의 확장 프로그램 → Apps Script에서 완성된 코드를 등록하고 소유자 권한으로 실행되는 웹 앱을 배포합니다. 서비스 요청마다 서버에서 세션과 커플 권한을 확인해야 합니다.
-4. 프런트엔드를 해당 API에 연결합니다. 두 계정과 서로 다른 기기로 가입·연결·PIN 입장·기록 공유·복구·게임 차례를 검증합니다. 다른 커플의 기록 접근도 차단되는지 확인합니다.
-5. GitHub 저장소 Settings → Pages → Build and deployment → Source를 GitHub Actions로 선택합니다.
-6. Actions → Deploy to GitHub Pages → Run workflow를 실행합니다. 게시 주소는 https://duwlsey.github.io/lovemap/ 입니다.
+1. 시트에서 확장 프로그램 → Apps Script를 엽니다.
+2. [production 설치 안내](apps-script/production/README.md)에 따라 **production/Code.gs 하나**를 붙여 넣고 SPREADSHEET_ID 속성을 설정합니다.
+3. setupLoveMap 함수를 실행하고 소유자 계정으로 권한을 승인합니다.
+4. 웹 앱을 실행 사용자 '나', 액세스 권한 '모든 사용자'로 배포합니다. 시트 자체는 비공개로 둡니다.
+5. 발급된 /exec 주소를 GitHub 저장소 Settings → Secrets and variables → Actions → Variables의 VITE_APPS_SCRIPT_URL에 저장합니다.
+6. Settings → Pages → Source에서 GitHub Actions를 선택합니다.
+7. Actions → Deploy to GitHub Pages → Run workflow를 실행합니다.
 
-현재 배포 작업은 수동 실행만 가능합니다. 서버 연결 전 실행하면 브라우저용 시제품이 게시됩니다. 실제 개인 기록은 서버 연결 검증 후 입력하세요.
+게시 경로는 /lovemap/입니다. 배포 작업은 자동 실행하지 않고 수동으로 실행합니다. API 주소가 없는 정식 빌드는 실제 계정 생성 대신 연결 준비 안내를 표시하며 미리보기는 사용할 수 있습니다.
 
-## 데이터와 비밀 정보
+## 게시 후 확인
 
-- localhost에서 만든 테스트 계정·기록은 브라우저에 있으며 저장소 업로드에 포함되지 않습니다. 실제 서비스로 자동 이전하지 않습니다.
-- 시트는 웹에 게시하지 않습니다. 개인 기록·PIN·세션·복구 코드를 GitHub에 올리지 않습니다.
-- 브라우저에 포함되는 환경 변수는 공개 정보입니다. 서버 비밀 값은 Apps Script의 스크립트 속성에 둡니다.
-- GitHub Pages에 올리는 파일에는 서버 코드를 실행할 기능이 없습니다. Apps Script는 별도로 배포합니다.
+휴대폰에서 첫 가입, 컴퓨터에서 상대방 연결, 서로 다른 기기의 PIN 재입장·답변 공유·질문 순서·메모 작성자·미니게임 차례를 확인합니다. 새 기기는 개인 복구 코드로 연결합니다. 다른 커플과 기록이 분리되는지도 검사합니다.
+
+현재 로컬 테스트는 이 규칙을 Google API 모의 환경에서 검증합니다. 실제 Apps Script 실행·권한·CORS 응답과 실기기 동작을 검증한 상태로 오해하지 마세요.
+
+## 비밀 정보
+
+PIN·복구 코드·세션 원문은 시트나 GitHub에 저장하지 않습니다. 서버 비밀 키는 Apps Script 속성에 둡니다. VITE_APPS_SCRIPT_URL은 공개되는 API 주소이며 비밀번호가 아닙니다. localhost에서 만든 테스트 데이터는 브라우저에만 있고 실제 배포로 옮기지 않습니다.

@@ -96,11 +96,11 @@ function MiniGame({ kind, actor, data, act, onClose, previewMode, onSwitch }) {
   </div>;
 }
 
-export default function DashboardPanel({ state, sections, currentName, dashboardStorageKey, previewMode, onPreviewSwitch, onExplore, onHistory, onGame, onArchive }) {
+export default function DashboardPanel({ state, sections, currentName, dashboardStorageKey, connectedDashboard, previewMode, onPreviewSwitch, onExplore, onHistory, onGame, onArchive }) {
   const label=usePreviewText();
   const actor = currentName;
   const [day, setDay] = useState(seoulDay), [data, setData] = useState(emptyDashboard), [error, setError] = useState(''), [text, setText] = useState(''), [busy, setBusy] = useState(false), [activeGame, setActiveGame] = useState(null);
-  const store = useMemo(() => makeDashboardStore(localStorage, { storageKey:previewMode?PREVIEW_DASHBOARD_STORAGE_KEY:(dashboardStorageKey||DASHBOARD_STORAGE_KEY), lock: task => navigator.locks ? navigator.locks.request('love-map-dashboard', task) : Promise.resolve().then(task) }), [previewMode,dashboardStorageKey]);
+  const store = useMemo(() => !previewMode && connectedDashboard ? connectedDashboard : makeDashboardStore(localStorage, { storageKey:previewMode?PREVIEW_DASHBOARD_STORAGE_KEY:(dashboardStorageKey||DASHBOARD_STORAGE_KEY), lock: task => navigator.locks ? navigator.locks.request('love-map-dashboard', task) : Promise.resolve().then(task) }), [previewMode,dashboardStorageKey,connectedDashboard]);
   const checkins = useMemo(() => ({ [currentName]: state.scores || [], [otherPerson(currentName)]: state.partnerScores || [] }), [state.scores, state.partnerScores, currentName]);
   const checkinsKey = JSON.stringify(checkins);
   useEffect(() => { const timer = setInterval(() => setDay(seoulDay()), 30000); return () => clearInterval(timer); }, []);
@@ -109,8 +109,9 @@ export default function DashboardPanel({ state, sections, currentName, dashboard
     const refresh = () => store.act(actor, 'daily.sync', {}, checkins).then(next => { if (mounted) { setData(next); setError(''); } }).catch(e => { if (mounted) setError(e.message); });
     refresh();
     const storage = event => { if (event.key === (previewMode?PREVIEW_DASHBOARD_STORAGE_KEY:(dashboardStorageKey||DASHBOARD_STORAGE_KEY))) store.read().then(next => { if (mounted) setData(next); }).catch(e => { if (mounted) setError(e.message); }); };
+    const timer = !previewMode && connectedDashboard ? setInterval(() => { if (document.visibilityState !== 'hidden') refresh(); }, 10000) : null;
     window.addEventListener('storage', storage); window.addEventListener('focus', refresh);
-    return () => { mounted = false; window.removeEventListener('storage', storage); window.removeEventListener('focus', refresh); };
+    return () => { mounted = false; clearInterval(timer); window.removeEventListener('storage', storage); window.removeEventListener('focus', refresh); };
   }, [store, actor, day, checkinsKey]);
   const queue = data.queues[actor];
   useEffect(() => { setText(''); }, [actor, queue?.day, queue?.activeId, queue?.version]);

@@ -31,7 +31,8 @@ async function makePin(pin, iterations) {
 
 // Local prototype. The final connected version must run these operations on the
 // server; browser storage and client-side throttling are not a security boundary.
-export function makePinAuthStore(storage, tabStorage, { now = Date.now, iterations = 600000, lock = task => task() } = {}) {
+export function makePinAuthStore(storage, tabStorage, { now = Date.now, iterations = 600000, lock = task => task(), security, id = () => crypto.randomUUID() } = {}) {
+  const { digest: hashValue, pinHash: hashPin, makePin: createPin, recoveryCode: createRecovery, random: randomBytes } = security || { digest, pinHash, makePin, recoveryCode, random };
   const read = () => {
     const raw = storage.getItem(AUTH_STORAGE_KEY);
     if (!raw) return { version: 1, pairs: [], members: [], sessions: [], attempts: {} };
@@ -47,9 +48,9 @@ export function makePinAuthStore(storage, tabStorage, { now = Date.now, iteratio
     return { memberId: member.id, pairId: pair.id, slot: member.slot, displayName: member.name, startedOn: pair.startedOn, linked: members.length === 2, names: Object.fromEntries(['여진', '민재'].map(slot => [slot, members.find(item => item.slot === slot)?.name || '상대방'])) };
   };
   async function startSession(data, member) {
-    const token = random(32);
+    const token = randomBytes(32);
     data.sessions = data.sessions.filter(session => session.expiresAt > now());
-    data.sessions.push({ tokenHash: await digest(token), memberId: member.id, expiresAt: now() + SESSION_MS });
+    data.sessions.push({ tokenHash: await hashValue(token), memberId: member.id, expiresAt: now() + SESSION_MS });
     write(data);
     tabStorage.setItem(AUTH_SESSION_KEY, token);
     remember(member.id);
@@ -58,7 +59,7 @@ export function makePinAuthStore(storage, tabStorage, { now = Date.now, iteratio
   async function requireSession(data) {
     const token = tabStorage.getItem(AUTH_SESSION_KEY);
     if (!token) throw new Error('다시 입장해주세요.');
-    const tokenHash = await digest(token);
+    const tokenHash = await hashValue(token);
     const session = data.sessions.find(item => item.tokenHash === tokenHash && item.expiresAt > now());
     const member = session && data.members.find(item => item.id === session.memberId);
     if (!member) { tabStorage.removeItem(AUTH_SESSION_KEY); throw new Error('다시 입장해주세요.'); }
@@ -78,17 +79,17 @@ export function makePinAuthStore(storage, tabStorage, { now = Date.now, iteratio
     validatePin(pin);
     const key = 'pin:' + member.id;
     checkWait(data, key);
-    if (await pinHash(pin, member.pin.salt, member.pin.iterations) !== member.pin.hash) fail(data, key, '비밀번호를 확인해주세요.');
+    if (await hashPin(pin, member.pin.salt, member.pin.iterations) !== member.pin.hash) fail(data, key, '비밀번호를 확인해주세요.');
     delete data.attempts[key];
   }
   async function memberRecord(name, pin, pairId, slot) {
-    const code = recoveryCode();
-    return { member: { id: crypto.randomUUID(), pairId, slot, name, pin: await makePin(pin, iterations), recoveryHash: await digest(normalizeRecovery(code)) }, code };
+    const code = createRecovery();
+    return { member: { id: id(), pairId, slot, name, pin: await createPin(pin, iterations), recoveryHash: await hashValue(normalizeRecovery(code)) }, code };
   }
   async function requirePrivatePin(data, pair, pin, memberId) {
-    if ((pair.sharedCodeHashes || []).includes(await digest('invite:' + pin))) throw new Error('개인 비밀번호와 두 사람의 연결 코드는 다르게 정해주세요.');
+    if ((pair.sharedCodeHashes || []).includes(await hashValue('invite:' + pin))) throw new Error('개인 비밀번호와 두 사람의 연결 코드는 다르게 정해주세요.');
     for (const other of data.members.filter(item => item.pairId === pair.id && item.id !== memberId)) {
-      if (await pinHash(pin, other.pin.salt, other.pin.iterations) === other.pin.hash) throw new Error('이 개인 비밀번호는 사용할 수 없어요. 다른 네 자리로 정해주세요.');
+      if (await hashPin(pin, other.pin.salt, other.pin.iterations) === other.pin.hash) throw new Error('이 개인 비밀번호는 사용할 수 없어요. 다른 네 자리로 정해주세요.');
     }
   }
   return {
@@ -109,9 +110,9 @@ export function makePinAuthStore(storage, tabStorage, { now = Date.now, iteratio
       const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(now()));
       if (!/^\d{4}-\d{2}-\d{2}$/.test(startedOn) || !Number.isFinite(day.getTime()) || day.toISOString().slice(0, 10) !== startedOn || startedOn > today) throw new Error('사귀기 시작한 날짜를 확인해주세요.');
       return lock(async () => {
-        const data = read(), inviteHash = await digest('invite:' + inviteCode);
+        const data = read(), inviteHash = await hashValue('invite:' + inviteCode);
         if (data.pairs.some(pair => pair.inviteHash === inviteHash && pair.inviteExpiresAt > now())) throw new Error('사용 중인 연결 코드예요. 상대방 연결하기를 이용해주세요.');
-        const pair = { id: crypto.randomUUID(), startedOn, inviteHash, sharedCodeHashes: [inviteHash], inviteExpiresAt: now() + INVITE_MS };
+        const pair = { id: id(), startedOn, inviteHash, sharedCodeHashes: [inviteHash], inviteExpiresAt: now() + INVITE_MS };
         const { member, code } = await memberRecord(name, pin, pair.id, '여진');
         data.pairs.push(pair); data.members.push(member);
         return { session: await startSession(data, member), recoveryCode: code, inviteCode };
@@ -121,7 +122,7 @@ export function makePinAuthStore(storage, tabStorage, { now = Date.now, iteratio
       name = validateName(name); validatePin(pin); validatePin(inviteCode);
       return lock(async () => {
         const data = read(); checkWait(data, 'join');
-        const inviteHash = await digest('invite:' + inviteCode);
+        const inviteHash = await hashValue('invite:' + inviteCode);
         const pair = data.pairs.find(item => item.inviteHash === inviteHash && item.inviteExpiresAt > now());
         if (!pair) fail(data, 'join', '연결 코드를 확인해주세요. 코드의 유효기간은 하루예요.');
         const members = data.members.filter(item => item.pairId === pair.id);
@@ -147,7 +148,7 @@ export function makePinAuthStore(storage, tabStorage, { now = Date.now, iteratio
         const data = read(), member = await requireSession(data);
         await verifyPin(data, member, currentPin);
         await requirePrivatePin(data, data.pairs.find(pair => pair.id === member.pairId), newPin, member.id);
-        member.pin = await makePin(newPin, iterations);
+        member.pin = await createPin(newPin, iterations);
         data.sessions = data.sessions.filter(session => session.memberId !== member.id);
         return startSession(data, member);
       });
@@ -156,13 +157,13 @@ export function makePinAuthStore(storage, tabStorage, { now = Date.now, iteratio
       validatePin(newPin);
       return lock(async () => {
         const data = read(); checkWait(data, 'recovery');
-        const hash = await digest(normalizeRecovery(code));
+        const hash = await hashValue(normalizeRecovery(code));
         const member = data.members.find(item => item.recoveryHash === hash);
         if (!member) fail(data, 'recovery', '복구 코드를 확인해주세요.');
         await requirePrivatePin(data, data.pairs.find(pair => pair.id === member.pairId), newPin, member.id);
-        const nextCode = recoveryCode();
-        member.recoveryHash = await digest(normalizeRecovery(nextCode));
-        member.pin = await makePin(newPin, iterations);
+        const nextCode = createRecovery();
+        member.recoveryHash = await hashValue(normalizeRecovery(nextCode));
+        member.pin = await createPin(newPin, iterations);
         data.sessions = data.sessions.filter(session => session.memberId !== member.id);
         delete data.attempts.recovery; delete data.attempts['pin:' + member.id];
         return { session: await startSession(data, member), recoveryCode: nextCode };
@@ -172,8 +173,8 @@ export function makePinAuthStore(storage, tabStorage, { now = Date.now, iteratio
       return lock(async () => {
         const data = read(), member = await requireSession(data);
         await verifyPin(data, member, currentPin);
-        const code = recoveryCode();
-        member.recoveryHash = await digest(normalizeRecovery(code));
+        const code = createRecovery();
+        member.recoveryHash = await hashValue(normalizeRecovery(code));
         write(data);
         return { recoveryCode: code };
       });
@@ -185,8 +186,8 @@ export function makePinAuthStore(storage, tabStorage, { now = Date.now, iteratio
         await verifyPin(data, member, currentPin);
         const pair = data.pairs.find(item => item.id === member.pairId);
         if (data.members.filter(item => item.pairId === pair.id).length >= 2) throw new Error('이미 두 사람이 연결되어 있어요.');
-        const hash = await digest('invite:' + inviteCode);
-        if (await pinHash(inviteCode, member.pin.salt, member.pin.iterations) === member.pin.hash) throw new Error('연결 코드는 개인 비밀번호와 다르게 정해주세요.');
+        const hash = await hashValue('invite:' + inviteCode);
+        if (await hashPin(inviteCode, member.pin.salt, member.pin.iterations) === member.pin.hash) throw new Error('연결 코드는 개인 비밀번호와 다르게 정해주세요.');
         if (data.pairs.some(item => item.id !== pair.id && item.inviteHash === hash && item.inviteExpiresAt > now())) throw new Error('다른 연결 코드를 정해주세요.');
         pair.inviteHash = hash; pair.sharedCodeHashes = [...new Set([...(pair.sharedCodeHashes || []), hash])]; pair.inviteExpiresAt = now() + INVITE_MS; write(data);
       });
@@ -194,7 +195,7 @@ export function makePinAuthStore(storage, tabStorage, { now = Date.now, iteratio
     async logout() {
       return lock(async () => {
         const data = read(), token = tabStorage.getItem(AUTH_SESSION_KEY);
-        if (token) { const hash = await digest(token); data.sessions = data.sessions.filter(item => item.tokenHash !== hash); write(data); }
+        if (token) { const hash = await hashValue(token); data.sessions = data.sessions.filter(item => item.tokenHash !== hash); write(data); }
         tabStorage.removeItem(AUTH_SESSION_KEY);
       });
     },
