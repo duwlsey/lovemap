@@ -10,7 +10,7 @@ React + Vite로 만든 두 사람의 애정 지도입니다. 실제 모드는 Go
 
 최신 설치 대상은 **[apps-script/production/Code.gs](apps-script/production/Code.gs) 하나**입니다. [설치 안내](apps-script/production/README.md)에 따라 Google에서 배포하고, GitHub Actions 변수 `VITE_APPS_SCRIPT_URL`에 배포 주소를 넣습니다. [전체 배포 순서](DEPLOYMENT.md)를 참고하세요.
 
-서버 코드와 프런트엔드 연결 코드는 준비되어 있으며, 실제 Apps Script 배포와 두 기기 실사용 검증은 배포 URL을 받은 뒤 진행합니다. 주소가 설정되지 않은 정식 빌드에서는 실제 계정 생성을 허용하지 않습니다. 개발 서버에서 주소를 생략하면 기존 로컬 시제품으로 동작합니다.
+배포된 Apps Script 주소를 앱의 기본 연결 주소로 설정했습니다. GitHub Actions 변수를 따로 넣지 않아도 기본 주소를 사용하며, VITE_APPS_SCRIPT_URL로 변경할 수 있습니다. 실제 서버의 정상 응답·비로그인 접근 차단·브라우저 교차 출처 응답을 확인했습니다. 회원 가입 이후의 두 기기 실사용 검증은 남아 있습니다. 개발 서버도 실제 저장소를 사용하며, 로그인 없이 들어가는 미리보기는 계속 별도 저장소를 사용합니다.
 
 ## 두 사람의 시작
 

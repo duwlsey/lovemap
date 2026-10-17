@@ -6,6 +6,7 @@ import './pin-access.css';
 import PinAccess, { AccountSettings } from './components/PinAccess.jsx';
 import { makePinAuthStore, AUTH_STORAGE_KEY } from './services/pin-auth.js';
 import { makeConnection } from './services/connected-store.js';
+import { DEFAULT_APPS_SCRIPT_URL } from './services/server-config.js';
 import { useConnectedPair } from './services/use-connected-pair.js';
 import { PreviewPrivacyContext, IdentityNamesContext, usePreviewText } from './components/PreviewPrivacy.jsx';
 import { displayIdentityText, relationshipDay, PREVIEW_ASKING_STORAGE_KEY } from './services/preview-privacy.js';
@@ -48,7 +49,7 @@ function makeGameSetup(mode,questionScores){
 }
 function App(){
   const [state,setState]=useState(defaultState),[view,setView]=useState('home'),[section,setSection]=useState(selfSections[0]),[questionIndex,setQuestionIndex]=useState(0),[modal,setModal]=useState(''),[auth,setAuth]=useState(null),[authChecked,setAuthChecked]=useState(false),[authError,setAuthError]=useState(''),[mobileNav,setMobileNav]=useState(false),[tab,setTab]=useState('home'),[previewMode,setPreviewMode]=useState(false),[selfReset,setSelfReset]=useState(0),[testPage,setTestPage]=useState('menu'),[loadedPair,setLoadedPair]=useState(''),[dataLoadFailed,setDataLoadFailed]=useState(false);
-  const connection=useMemo(()=>((import.meta.env?.VITE_APPS_SCRIPT_URL||import.meta.env?.PROD)?makeConnection({endpoint:import.meta.env?.VITE_APPS_SCRIPT_URL,storage:localStorage,tabStorage:sessionStorage}):null),[]);
+  const connection=useMemo(()=>makeConnection({endpoint:import.meta.env?.VITE_APPS_SCRIPT_URL||DEFAULT_APPS_SCRIPT_URL,storage:localStorage,tabStorage:sessionStorage}),[]);
   const authStore=useMemo(()=>connection?.auth||makePinAuthStore(localStorage,sessionStorage,{lock:task=>navigator.locks?navigator.locks.request('love-map-pin-auth',task):Promise.resolve().then(task)}),[connection]);
   const flushConnectedPair=useConnectedPair({connection,auth,previewMode,state,defaultState,setState,setLoadedPair,setAuthError});
   useEffect(()=>{if(previewMode)return;let active=true;const refresh=()=>authStore.getSession().then(session=>{if(active){setAuth(session);setAuthChecked(true)}}).catch(error=>{if(active){setAuthError(error.message);setAuthChecked(true)}});refresh();const changed=event=>{if(event.key===AUTH_STORAGE_KEY)refresh()};window.addEventListener('storage',changed);window.addEventListener('focus',refresh);return()=>{active=false;window.removeEventListener('storage',changed);window.removeEventListener('focus',refresh)}},[authStore,previewMode]);
