@@ -110,7 +110,7 @@
 .heart-confetti svg{position:absolute;left:var(--x);top:-25px;color:#c68f99;fill:#d6a6af;animation:heart-fall 2.7s var(--delay) ease-in infinite}
 @keyframes heart-fall{to{transform:translate(var(--drift),380px) rotate(240deg);opacity:.1}}
 .punch-final{display:flex;gap:30px;font-size:11px}.punch-final b{display:block;font-size:24px;margin-top:6px}
-@media(prefers-reduced-motion:reduce){.heart-confetti svg{animation:none;top:var(--x);opacity:.4}.dash-game-tile{transition:none}}
+@media(prefers-reduced-motion:reduce){.dash-game-tile{transition:none}}
 @media(max-width:1050px){.dash-update-list button>small{display:none}.dash-games{gap:10px}.dash-game-tile{padding:15px;min-height:185px}}
 @media(max-width:760px){.dashboard-page .hero-copy{padding:35px 0 40px}.dashboard-page .hero h1{margin-top:20px;margin-bottom:16px}.dashboard-new{padding-top:23px}.dash-section-top{gap:8px;flex-wrap:wrap;margin-bottom:23px}.dash-section-top>.eyebrow{font-size:8px}.dash-daily-grid,.dash-lower-grid{grid-template-columns:1fr}.dash-daily-grid>section,.dash-daily-grid>section+section{padding:25px 0;min-height:unset;border-left:0}.dash-daily-grid>section+section{border-top:1px solid #e3e2d8}.dash-card-heading h2{font-size:19px}.dash-daily-grid h3{font-size:16px}.dash-answer-wait,.dash-submitted{padding:30px 0 20px}.dash-trend{padding:25px 0}.dash-archive{border-left:0;border-top:1px solid #e3e2d8;padding:27px 0}.dash-game-zone>.dash-card-heading{align-items:flex-end;gap:7px}.dash-map-game{font-size:10px;gap:7px}.dash-game-zone .eyebrow{font-size:7px;letter-spacing:1px}.dash-games{gap:7px}.dash-game-tile{min-height:155px;padding:12px 10px}.game-tile-art{height:65px;gap:4px}.art-tic span{font-size:38px}.art-gomoku{width:60px;height:60px;background-size:auto}.art-gomoku i{width:14px;height:14px}.art-gomoku i:nth-child(3){left:38px;top:38px}.art-punch>span{font-size:22px;letter-spacing:1px}.art-punch i{width:53px}.game-tile-footer b{font-size:12px}.game-tile-footer svg{width:13px}.mini-game-backdrop{padding:12px}.mini-game-dialog{padding:22px 18px;max-height:calc(100dvh - 24px)}.board-gomoku{padding:7px}.board-tic{max-width:285px}.result-word{font-size:62px}.dash-update-count{font-size:8px}}
 .game-tile-top{display:flex;align-items:center;justify-content:space-between;gap:5px}
@@ -180,7 +180,7 @@
 .tear-rain>i{position:absolute;left:var(--x);top:-30px;width:var(--drop-size);height:calc(var(--drop-size) * 1.7);border-radius:65% 65% 75% 75%;background:#8badd5;opacity:0;animation:tear-fall var(--duration) var(--delay) linear infinite}
 .tear-rain>i:before{content:'';position:absolute;bottom:100%;left:45%;width:1px;height:15px;background:linear-gradient(transparent,#8badd54d)}
 @keyframes tear-fall{0%{transform:translateY(0);opacity:0}12%{opacity:.65}85%{opacity:.4}100%{transform:translateY(370px);opacity:0}}
-@media(prefers-reduced-motion:reduce){.tear-rain>i{animation:none;top:var(--x);opacity:.3}}
+
 @media(max-width:760px){.punch-machine{padding-left:18px;padding-right:18px}.punch-marquee{margin-left:-18px;margin-right:-18px;padding-left:18px;padding-right:18px}.punch-target{height:132px;padding-top:25px}.punch-bag{width:75px;height:75px}.punch-machine .punch-display{font-size:50px}}
 
 /* Shared geometry stays identical across mobile fonts and screen sizes. */
@@ -192,3 +192,11 @@
 .tear-rain{z-index:1}.tear-rain>i{width:calc(var(--drop-size) + 2px);height:22px;border-radius:2px;background:linear-gradient(transparent,#719dd5);opacity:.65;will-change:transform;animation-name:visible-rain}
 @keyframes visible-rain{from{transform:translate3d(-12px,-25px,0);opacity:.7}to{transform:translate3d(12px,440px,0);opacity:.25}}
 @media(max-width:760px){.art-tic .tic-mark{width:36px;height:36px}.mini-game-backdrop{backdrop-filter:none}}
+
+/* Reduced motion: fewer particles fall slowly straight down, without rotation or sway. */
+@keyframes gentle-result-fall{from{transform:translate3d(0,0,0);opacity:0}15%{opacity:.45}85%{opacity:.45}to{transform:translate3d(0,440px,0);opacity:0}}
+@media(prefers-reduced-motion:reduce){
+  .heart-confetti svg,.tear-rain>i{top:-30px;animation:gentle-result-fall 7s linear infinite;animation-delay:var(--gentle-delay);will-change:transform}
+  .heart-confetti svg:nth-child(n+9),.tear-rain>i:nth-child(n+9){display:none}
+  .tear-rain>i:before{display:none}
+}
