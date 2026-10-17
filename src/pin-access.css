@@ -1,0 +1,29 @@
+.pin-access{max-width:355px}
+.pin-access>.eyebrow{display:block}
+.pin-access .pin-back{display:flex;margin-bottom:20px;gap:6px}
+.pin-input{letter-spacing:10px;font-size:17px!important;text-align:center;font-variant-numeric:tabular-nums}
+.pin-profile-select{height:39px;border:0;border-bottom:1px solid #dfdfd3;background:transparent;color:#66715a;padding:6px 0;font-size:12px}
+.pin-entry-actions{display:flex;flex-direction:column;margin-top:20px;border-top:1px solid #e9e7df}
+.pin-entry-actions>button,.pin-settings-actions>button{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:43px;padding:10px 0;border:0;border-bottom:1px solid #eeece5;background:transparent;font-size:11px;color:#77856a}
+.pin-entry-actions>button:hover,.pin-settings-actions>button:hover{color:#4f633f}
+.pin-entry-actions>.pin-recover-link{min-height:unset;display:block;border:0;font-size:9px;color:#a19e92;padding-top:16px;text-align:center}
+.pin-access .preview-entry{margin-top:20px;padding-top:17px}
+.pin-access .form-error{margin:0;font-size:10px}
+.pin-recovery-input{width:100%;resize:vertical;border:1px solid #e3e3d8;background:#fafaf5;border-radius:4px;padding:10px;font:11px/1.8 'DM Sans',sans-serif;color:#59684d;text-transform:none}
+.pin-invite-receipt{padding:18px 0;border-top:1px solid #e7e7da;border-bottom:1px solid #e7e7da;margin-top:22px;text-align:center}
+.pin-invite-receipt>span,.pin-recovery-receipt>span{font-size:10px;color:#959a87}
+.pin-invite-receipt strong{display:block;letter-spacing:10px;margin:12px 0;font:400 31px 'DM Sans',sans-serif;color:#637950}
+.pin-invite-receipt small{font-size:9px;color:#a3a495}
+.pin-recovery-receipt{margin:22px 0 16px}
+.pin-recovery-receipt code{display:block;padding:13px 10px;margin:10px 0;background:#eef1e6;font:11px/1.9 'DM Sans',sans-serif;color:#697d54;overflow-wrap:anywhere;text-transform:none}
+.pin-recovery-receipt>button{display:flex;align-items:center;gap:5px;background:transparent;border:0;padding:2px 0;font-size:10px;color:#83916f}
+.pin-recovery-receipt>p{font:10px/1.9 var(--serif);color:#a09e92;margin-top:12px}
+.pin-access .pin-confirm-saved{display:flex;flex-direction:row;align-items:center;gap:8px;margin:20px 0;font-size:10px;color:#858e77}
+.pin-confirm-saved input{width:14px;height:14px;accent-color:#78865f}
+.pin-settings-actions{display:flex;flex-direction:column}
+.pin-settings .pin-input{height:41px;padding:7px}
+.pin-notice{font-size:11px!important;color:#758961!important;margin:18px 0 0!important;line-height:1.8}
+.pin-settings .form-error{margin-top:15px;color:#a56f60;font-size:11px;line-height:1.8}
+.pin-settings form label{margin-bottom:2px}
+@media(max-width:760px){.pin-access{max-width:none}.pin-entry-actions>button{min-height:47px}.pin-access .pin-input{height:44px}}
+.app-save-error{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);z-index:40;background:#fffaf4;border:1px solid #dfd2bc;color:#9a725d;padding:12px 18px;font-size:11px;border-radius:5px;max-width:90vw}
